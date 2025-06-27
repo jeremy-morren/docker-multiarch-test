@@ -81,17 +81,23 @@ jobs:
           foreach ($l in $metadata.labels) {
             $args += @("--label", $l)
           }
-          foreach ($a in $metadata.annotations) {
-            $args += ("--annotation", $a)
+          # Annotations apparently aren't supported on windows
+          if ("${{ matrix.platform }}" -notlike "windows/*") {
+            foreach ($a in $metadata.annotations) {
+              $args += ("--annotation", $a)
+            }
           }
           $platform = "${{ matrix.platform }}".Replace('/','-')
           foreach ($t in $metadata.tags) {
             $args += @("--tag", "${t}-${platform}")
           }
+          $iidfile = "${{ runner.temp }}/imageId"
           docker build $args `
             --platform "${{ matrix.platform }}" `
             --file "${env:dockerfile}.${env:dockerfileExt}" `
+            --iidfile $iidfile
             $env:context
+          
 
         env:
           context: ${{ runner.temp }}/publish
