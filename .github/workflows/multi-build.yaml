@@ -78,14 +78,14 @@ jobs:
         run: |
           $metadata = ConvertFrom-Json $env:DOCKER_METADATA_OUTPUT_JSON
           $args = @()
-          for ($l in $metadata.labels) {
+          foreach ($l in $metadata.labels) {
             $args += @("--label", $l)
           }
-          for ($a in $metadata.annotations) {
+          foreach ($a in $metadata.annotations) {
             $args += ("--annotation", $a)
           }
           $platform = "${{ matrix.platform }}".Replace('/','-')
-          for ($t in $metadata.tags) {
+          foreach ($t in $metadata.tags) {
             $args += @("--tag", "${tag}-${platform}")
           }
           docker build $args `
