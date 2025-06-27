@@ -86,7 +86,7 @@ jobs:
           }
           $platform = "${{ matrix.platform }}".Replace('/','-')
           foreach ($t in $metadata.tags) {
-            $args += @("--tag", "${tag}-${platform}")
+            $args += @("--tag", "${t}-${platform}")
           }
           docker build $args `
             --platform "${{ matrix.platform }}" `
