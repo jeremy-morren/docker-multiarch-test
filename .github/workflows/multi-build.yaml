@@ -32,9 +32,9 @@ jobs:
       matrix:
         platform:
           - linux/amd64
-          - linux/arm64
+          # - linux/arm64
           - windows/amd64
-          - windows/arm64
+          # - windows/arm64
       # The matrix includes two platforms: linux/amd64 and linux/arm64.
       # The build job will run for each platform in the matrix.
 
@@ -95,8 +95,10 @@ jobs:
       - name: Build image
         shell: pwsh
         run: |
-          $env:labels
-          $env:annotations
+          $labels = $env:labels.Split([Environment]::Newline)
+          $annotations = $env:annotations.Split([Environment]::Newline)
+          echo "Labels: $($labels.Length)"
+          echo "Annotations: $(annotations.Length)"
         env:
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
