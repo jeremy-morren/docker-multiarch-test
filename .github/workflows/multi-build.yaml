@@ -61,7 +61,7 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - run: dotnet publish HelloWorldApi/HelloWorldApi.csproj -c Release -o ${{ runner.temp }}/publish
+      - run: dotnet publish src/HelloWorldApi/HelloWorldApi.csproj -c Release -o ${{ runner.temp }}/publish
         name: Publish app
 
       - name: Prepare environment for current platform 
