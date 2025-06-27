@@ -7,9 +7,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'Dockerfile'
-      - '.github/workflows/multi-build.yaml'
+
 env:
   # The name of the Docker image to be built and pushed to GHCR
   # The image name is derived from the GitHub repository name and the GitHub Container Registry (GHCR) URL.
@@ -56,19 +54,26 @@ jobs:
     name: Build Docker image for ${{ matrix.platform }}
 
     steps:
-      -
-        name: Prepare environment for current platform 
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - run: dotnet publish HelloWorldApi/HelloWorldApi.csproj -c Release -o ${{ runner.temp }}/publish
+        name: Publish app
+
+      - name: Prepare environment for current platform 
         # This step sets up the environment for the current platform being built.
         # It replaces the '/' character in the platform name with '-' and sets it as an environment variable.
         # This is useful for naming artifacts and other resources that cannot contain '/'.
         # The environment variable PLATFORMS_PAIR will be used later in the workflow.
         id: prepare
+        shell: pwsh
         run: |
-          platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
-
-      - name: Checkout
-        uses: actions/checkout@v4
+          $platform = "${{ matrix.platform }}".Replace('/','-')
+          Add-Content -Value "PLATFORM_PAIR=${platform}" -Path $env:GITHUB_ENV
 
       - name: Docker meta default
         # This step generates metadata for the Docker image.
@@ -105,13 +110,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - run: dotnet publish HelloWorldApi/HelloWorldApi.csproj -c Release -o ${{ runner.temp }}/publish
-        name: Publish app
 
       # - name: Build and push by digest
       #   # This step builds and pushes the Docker image using Buildx.
