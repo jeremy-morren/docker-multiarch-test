@@ -95,8 +95,11 @@ jobs:
           docker build $args `
             --platform "${{ matrix.platform }}" `
             --file "${env:dockerfile}.${env:dockerfileExt}" `
-            --iidfile $iidfile
+            --iidfile $iidfile `
             $env:context
+          
+          $imageId = Get-Content $iidfile
+          docker image inspect $imageId
           
 
         env:
