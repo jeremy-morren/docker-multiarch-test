@@ -98,7 +98,7 @@ jobs:
           $labels = $env:labels.Split([Environment]::Newline)
           $annotations = $env:annotations.Split([Environment]::Newline)
           echo "Labels: $($labels.Length)"
-          echo "Annotations: $(annotations.Length)"
+          echo "Annotations: $($annotations.Length)"
         env:
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
