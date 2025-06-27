@@ -94,11 +94,7 @@ jobs:
 
       - name: Build image
         shell: pwsh
-        run: |
-          $labels = $env:labels.Split([Environment]::Newline)
-          $annotations = $env:annotations.Split([Environment]::Newline)
-          echo "Labels: $($labels.Length)"
-          echo "Annotations: $($annotations.Length)"
+        run: Get-ChildItem Env:\
         env:
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
