@@ -94,7 +94,9 @@ jobs:
 
       - name: Build image
         shell: pwsh
-        run: Get-ChildItem Env:\
+        run: |
+          $json = ConvertFrom-Json $env:DOCKER_METADATA_OUTPUT_JSON
+          ConvertTo-Json $json
         env:
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
