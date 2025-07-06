@@ -95,7 +95,7 @@ jobs:
           docker build $args `
             --platform "${{ matrix.platform }}" `
             --file "${env:dockerfile}.${env:dockerfileExt}" `
-            --metadata-file $file `
+            --metadata-file $output `
             $env:context
           
           Get-Content $output
