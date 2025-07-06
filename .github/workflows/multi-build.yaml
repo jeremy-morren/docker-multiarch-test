@@ -86,9 +86,6 @@ jobs:
             $args += @("--label", $l)
           }
           $platform = "${{ matrix.platform }}".Replace('/','-')
-          foreach ($t in $metadata.tags) {
-            $args += @("--tag", "${t}-${platform}")
-          }
           $output = "${{ runner.temp }}/metadata"
           docker build $args `
             --platform "${{ matrix.platform }}" `
@@ -104,14 +101,18 @@ jobs:
           docker image inspect $digest
 
           $id = $digest.TrimStart("sha256:")
+          Add-Content -Value "digest=${digest}" -Path $env:GITHUB_OUTPUT
           Add-Content -Value "imageId=${id}" -Path $env:GITHUB_OUTPUT
+          Add-Content -Value "platform=${platform}" -Path $env:GITHUB_OUTPUT
 
         env:
           context: ${{ runner.temp }}/publish
           dockerfile: src/HelloWorldApi/Dockerfile.windows
 
       - name: Push Image
-        run: docker push "${{ steps.build.outputs.imageId }}"
+        run: |
+          docker image tag ${{ steps.build.outputs.imageId }} "${{ env.GHCR_IMAGE }}:${{ steps.build.outputs.digest }}"
+          docker push ${{ env.GHCR_IMAGE }}
           
       - name: Export digest
         shell: pwsh
@@ -119,17 +120,17 @@ jobs:
           mkdir ${{ runner.temp }}/digests
           Set-Content -Value "" -Path ${{ runner.TEMP }}/digests/${{ steps.build.outputs.imageId }}
 
-      # - name: Upload digest
-      #   # This step uploads the digest file to the GitHub Actions artifact storage.
-      #   # It uses the actions/upload-artifact action to upload the file created in the previous step.
-      #   # The artifact is named digests-${{ env.PLATFORM_PAIR }}, where PLATFORM_PAIR is the platform name with '/' replaced by '-'.
-      #   # The artifact is retained for 1 day, and if no files are found, it will throw an error.      
-      #   uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-      #   with:
-      #     name: digests-${{ env.PLATFORM_PAIR }}
-      #     path: ${{ runner.temp }}/digests/*
-      #     if-no-files-found: error
-      #     retention-days: 1
+      - name: Upload digest
+        # This step uploads the digest file to the GitHub Actions artifact storage.
+        # It uses the actions/upload-artifact action to upload the file created in the previous step.
+        # The artifact is named digests-${{ env.PLATFORM_PAIR }}, where PLATFORM_PAIR is the platform name with '/' replaced by '-'.
+        # The artifact is retained for 1 day, and if no files are found, it will throw an error.      
+        uses: actions/upload-artifact@4.6.2
+        with:
+          name: digests-${{ steps.build.outputs.platform }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
 
       # - name: Set up Docker Context for Buildx
       #   # This step sets up a Docker context for Buildx.
