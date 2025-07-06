@@ -301,7 +301,7 @@ jobs:
 
   
   test:
-    depends-on: merge
+    needs: [merge]
     permissions:
       packages: read
 
