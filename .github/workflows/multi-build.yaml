@@ -100,9 +100,10 @@ jobs:
             exit $LASTEXITCODE
           }
           
-          $id = Get-Content $output
+          $digest = Get-Content $output
           docker image inspect $id
-          
+
+          $id = $digest.Substring("sha256:".Length)
           Add-Content -Value "imageId=${id}" -Path $env:GITHUB_OUTPUT
           
 
