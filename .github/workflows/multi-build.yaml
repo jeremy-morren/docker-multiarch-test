@@ -99,7 +99,7 @@ jobs:
         id: get-digest
         run: |
           $digest = docker image inspect ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }} --format '{{ index .RepoDigests 0 }}'
-          $digest = $digest.TrimStart("sha256:")
+          $digest = $digest.Split('@')[1].TrimStart("sha256:")
           Add-Content -Value "digest=${digest}" -Path $env:GITHUB_OUTPUT
           
       - name: Export digest
