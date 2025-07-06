@@ -97,6 +97,7 @@ jobs:
       - name: Get image digest
         id: get-digest
         run: |
+          docker image inspect ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }}
           $digest = docker image inspect ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }} --format '{{ index .RepoDigests 0 }}'
           $digest = $digest.Split('@')[1].TrimStart("sha256:")
           Add-Content -Value "digest=${digest}" -Path $env:GITHUB_OUTPUT
