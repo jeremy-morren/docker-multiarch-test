@@ -60,6 +60,15 @@ jobs:
       - run: dotnet publish src/HelloWorldApi/HelloWorldApi.csproj -c Release -o ${{ runner.temp }}/publish
         name: Publish app
 
+      - name: Login to GitHub Container Registry
+        # This step logs in to the GitHub Container Registry (GHCR) using the docker/login-action.
+        # It uses the GitHub actor's username and the GITHUB_TOKEN secret for authentication.
+        uses: docker/login-action@3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Docker meta default
         id: meta
         uses: docker/metadata-action@v5
@@ -67,6 +76,7 @@ jobs:
           images: ${{ env.GHCR_IMAGE }}
 
       - name: Build image
+        id: build
         shell: pwsh
         # JSON object format: @ { tags: [], labels: [], annotations: []}
         run: |
@@ -93,11 +103,33 @@ jobs:
           $id = Get-Content $output
           docker image inspect $id
           
+          Add-Content -Value "imageId=${id}" -Path $env:GITHUB_OUTPUT
+          
 
         env:
           context: ${{ runner.temp }}/publish
           dockerfile: src/HelloWorldApi/Dockerfile.windows
+
+      - name: Push Image
+        run: docker push "${{ steps.build.outputs.imageId }}"
           
+      - name: Export digest
+        shell: pwsh
+        run: |
+          mkdir ${{ runner.temp }}/digests
+          Set-Content -Value "" -Path ${{ runner.TEMP }}/digests/${{ steps.build.outputs.imageId }}
+
+      # - name: Upload digest
+      #   # This step uploads the digest file to the GitHub Actions artifact storage.
+      #   # It uses the actions/upload-artifact action to upload the file created in the previous step.
+      #   # The artifact is named digests-${{ env.PLATFORM_PAIR }}, where PLATFORM_PAIR is the platform name with '/' replaced by '-'.
+      #   # The artifact is retained for 1 day, and if no files are found, it will throw an error.      
+      #   uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      #   with:
+      #     name: digests-${{ env.PLATFORM_PAIR }}
+      #     path: ${{ runner.temp }}/digests/*
+      #     if-no-files-found: error
+      #     retention-days: 1
 
       # - name: Set up Docker Context for Buildx
       #   # This step sets up a Docker context for Buildx.
