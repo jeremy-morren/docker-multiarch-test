@@ -92,7 +92,7 @@ jobs:
           $output = "${{ runner.temp }}/metadata"
           docker build $args `
             --iidfile $output `
-            --output "type=image,name=${{ env:GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true" `
+            --output "type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true" `
             --platform "${{ matrix.platform }}" `
             --file "${env:dockerfile}.${env:dockerfileExt}" `
             $env:context
