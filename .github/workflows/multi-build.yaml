@@ -111,8 +111,9 @@ jobs:
 
       - name: Push Image
         run: |
-          docker image tag ${{ steps.build.outputs.imageId }} "${{ env.GHCR_IMAGE }}@${{ steps.build.outputs.digest }}"
-          docker push ${{ env.GHCR_IMAGE }}
+          $tag = "${{ env.GHCR_IMAGE }}@${{ steps.build.outputs.digest }}"
+          docker image tag ${{ steps.build.outputs.imageId }} $tag
+          docker push $tag
           
       - name: Export digest
         shell: pwsh
