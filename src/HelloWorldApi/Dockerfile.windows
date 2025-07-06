@@ -1,5 +1,5 @@
 ﻿FROM mcr.microsoft.com/windows/nanoserver:ltsc2022 AS base
 WORKDIR /app
 EXPOSE 8080
-COPY . .
-ENTRYPOINT ["./HelloWorldApi"]
+# COPY . .
+# ENTRYPOINT ["./HelloWorldApi"]

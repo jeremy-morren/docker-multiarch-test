@@ -53,16 +53,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+      # - uses: actions/setup-dotnet@v4
+      #   with:
+      #     dotnet-version: '8.0.x'
 
-      - run: dotnet publish src/HelloWorldApi/HelloWorldApi.csproj -c Release -o ${{ runner.temp }}/publish
-        name: Publish app
+      # - run: dotnet publish src/HelloWorldApi/HelloWorldApi.csproj -c Release -o ${{ runner.temp }}/publish
+      #   name: Publish app
 
       - name: Login to GitHub Container Registry
-        # This step logs in to the GitHub Container Registry (GHCR) using the docker/login-action.
-        # It uses the GitHub actor's username and the GITHUB_TOKEN secret for authentication.
         uses: docker/login-action@3.4.0
         with:
           registry: ghcr.io
@@ -80,6 +78,8 @@ jobs:
         shell: pwsh
         # JSON object format: @ { tags: [], labels: [], annotations: []}
         run: |
+          docker build --help
+
           $metadata = ConvertFrom-Json $env:DOCKER_METADATA_OUTPUT_JSON
           $args = @()
           foreach ($t in $metadata.tags) {
@@ -92,7 +92,6 @@ jobs:
           $output = "${{ runner.temp }}/metadata"
           docker build $args `
             --iidfile $output `
-            --output "type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true" `
             --platform "${{ matrix.platform }}" `
             --file "${env:dockerfile}.${env:dockerfileExt}" `
             $env:context
@@ -110,7 +109,8 @@ jobs:
           Add-Content -Value "platform=${platform}" -Path $env:GITHUB_OUTPUT
 
         env:
-          context: ${{ runner.temp }}/publish
+          # context: ${{ runner.temp }}/publish
+          context: ${{ runner.temp }}
           dockerfile: src/HelloWorldApi/Dockerfile.windows
 
       # - name: Push Image
