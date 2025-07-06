@@ -85,9 +85,7 @@ jobs:
           docker image inspect $digest
 
           $id = $digest.TrimStart("sha256:")
-          Add-Content -Value "digest=${digest}" -Path $env:GITHUB_OUTPUT
           Add-Content -Value "imageId=${id}" -Path $env:GITHUB_OUTPUT
-          Add-Content -Value "platform=${platform}" -Path $env:GITHUB_OUTPUT
 
         env:
           # context: ${{ runner.temp }}/publish
@@ -95,23 +93,28 @@ jobs:
           dockerfile: src/HelloWorldApi/Dockerfile.windows
 
       - name: Push Image
+        run: docker push ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }}
+        
+      - name: Get image digest
+        id: get-digest
         run: |
-          docker push ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }}
-          docker image inspect ${{ steps.build.outputs.imageId }}
+          $digest = docker image inspect ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }} --format '{{ index .RepoDigests 0 }}'
+          $digest = $digest.TrimStart("sha256:")
+          Add-Content -Value "digest=${digest}" -Path $env:GITHUB_OUTPUT
           
-      # - name: Export digest
-      #   shell: pwsh
-      #   run: |
-      #     mkdir ${{ runner.temp }}/digests
-      #     Set-Content -Value "" -Path ${{ runner.TEMP }}/digests/${{ env.GHCR_TAG }}
+      - name: Export digest
+        shell: pwsh
+        run: |
+          mkdir ${{ runner.temp }}/digests
+          Set-Content -Value "" -Path ${{ runner.TEMP }}/digests/${{ steps.get-digest.outputs.digest }}
 
-      # - name: Upload digest 
-      #   uses: actions/upload-artifact@4.6.2
-      #   with:
-      #     name: digests-${{ steps.build.outputs.platform }}
-      #     path: ${{ runner.temp }}/digests/*
-      #     if-no-files-found: error
-      #     retention-days: 1
+      - name: Upload digest 
+        uses: actions/upload-artifact@4.6.2
+        with:
+          name: digests-${{ steps.build.outputs.platform }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
 
   # build-linux:
   #   permissions:
