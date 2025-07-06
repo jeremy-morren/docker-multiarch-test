@@ -314,13 +314,8 @@ jobs:
           - windows-latest
     
     runs-on: ${{ matrix.runs-on }}
-    env:
-      IMAGE: ${{ env.GHCR_IMAGE }}:latest
     steps:
-      - run: docker pull ${{ env.IMAGE }}
-        name: Pull latest image
-
-      - run: docker run -d -p 8080:8080 ${{ env.IMAGE }}
+      - run: docker run -d -p 8080:8080 "${{ env.GHCR_IMAGE }}:latest"
 
       - run: curl -i http://localhost:8080/hello-world
         name: Test API
