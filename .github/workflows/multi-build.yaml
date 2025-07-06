@@ -78,8 +78,6 @@ jobs:
         shell: pwsh
         # JSON object format: @ { tags: [], labels: [], annotations: []}
         run: |
-          docker buildx build --help
-
           $metadata = ConvertFrom-Json $env:DOCKER_METADATA_OUTPUT_JSON
           $args = @()
           foreach ($t in $metadata.tags) {
@@ -113,9 +111,8 @@ jobs:
           context: ${{ runner.temp }}
           dockerfile: src/HelloWorldApi/Dockerfile.windows
 
-      # - name: Push Image
-      #   run: 
-      #     docker push "${{ env.GHCR_IMAGE }}@${{ steps.build.outputs.digest }}
+      - name: Push Image
+        run: docker push "${{ env.GHCR_IMAGE }}@${{ steps.build.outputs.digest }}
           
       - name: Export digest
         shell: pwsh
