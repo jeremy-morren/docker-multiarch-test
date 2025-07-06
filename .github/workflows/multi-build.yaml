@@ -101,11 +101,10 @@ jobs:
           }
           
           $digest = Get-Content $output
-          docker image inspect $id
+          docker image inspect $digest
 
-          $id = $digest.Substring("sha256:".Length)
+          $id = $digest.TrimStart("sha256:")
           Add-Content -Value "imageId=${id}" -Path $env:GITHUB_OUTPUT
-          
 
         env:
           context: ${{ runner.temp }}/publish
