@@ -26,13 +26,11 @@ concurrency:
 
 jobs:
   # The build job builds the Docker image for each platform specified in the matrix.
-  build:
+  build-windows:
     strategy:
       fail-fast: false
       matrix:
         platform:
-          - linux/amd64
-          # - linux/arm64
           - windows/amd64
           # - windows/arm64
       # The matrix includes two platforms: linux/amd64 and linux/arm64.
@@ -42,9 +40,7 @@ jobs:
       packages: write
 
     runs-on: >-
-      ${{ matrix.platform == 'linux/amd64' && 'ubuntu-latest' ||
-          matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' ||
-          matrix.platform == 'windows/amd64' && 'windows-2022' ||
+      ${{ matrix.platform == 'windows/amd64' && 'windows-2022' ||
           matrix.platform == 'windows/arm64' && 'windows-11-arm' }}
     # The job runs on different runners based on the platform.
     # For linux/amd64, it runs on the latest Ubuntu runner.
@@ -52,8 +48,7 @@ jobs:
     # The runner is selected based on the platform specified in the matrix.
 
     name: Build Docker image for ${{ matrix.platform }}
-      
-
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,7 +66,6 @@ jobs:
         with:
           images: ${{ env.GHCR_IMAGE }}
 
-
       - name: Build image
         shell: pwsh
         # JSON object format: @ { tags: [], labels: [], annotations: []}
@@ -81,12 +75,6 @@ jobs:
           foreach ($l in $metadata.labels) {
             $args += @("--label", $l)
           }
-          # Annotations apparently aren't supported on windows
-          if ("${{ matrix.platform }}" -notlike "windows/*") {
-            foreach ($a in $metadata.annotations) {
-              $args += ("--annotation", $a)
-            }
-          }
           $platform = "${{ matrix.platform }}".Replace('/','-')
           foreach ($t in $metadata.tags) {
             $args += @("--tag", "${t}-${platform}")
@@ -95,20 +83,20 @@ jobs:
           docker build $args `
             --platform "${{ matrix.platform }}" `
             --file "${env:dockerfile}.${env:dockerfileExt}" `
-            --metadata-file $output `
+            --iidfile $output `
             $env:context
+
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
           
-          Get-Content $output
+          $id = Get-Content $output
+          docker image inspect $id
           
 
         env:
           context: ${{ runner.temp }}/publish
-          dockerfile: src/HelloWorldApi/Dockerfile
-          dockerfileExt: >-
-            ${{ matrix.platform == 'linux/amd64' && 'linux' ||
-                matrix.platform == 'linux/arm64' && 'linux' ||
-                matrix.platform == 'windows/amd64' && 'windows' ||
-                matrix.platform == 'windows/arm64' && 'windows' }}
+          dockerfile: src/HelloWorldApi/Dockerfile.windows
           
 
       # - name: Set up Docker Context for Buildx
