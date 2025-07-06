@@ -33,7 +33,7 @@ jobs:
       matrix:
         platform:
           - windows/amd64
-          # - windows/arm64
+          - windows/arm64
       # The matrix includes two platforms: linux/amd64 and linux/arm64.
       # The build job will run for each platform in the matrix.
 
@@ -119,11 +119,7 @@ jobs:
           mkdir ${{ runner.temp }}/digests
           Set-Content -Value "" -Path ${{ runner.TEMP }}/digests/${{ steps.build.outputs.imageId }}
 
-      - name: Upload digest
-        # This step uploads the digest file to the GitHub Actions artifact storage.
-        # It uses the actions/upload-artifact action to upload the file created in the previous step.
-        # The artifact is named digests-${{ env.PLATFORM_PAIR }}, where PLATFORM_PAIR is the platform name with '/' replaced by '-'.
-        # The artifact is retained for 1 day, and if no files are found, it will throw an error.      
+      - name: Upload digest 
         uses: actions/upload-artifact@4.6.2
         with:
           name: digests-${{ steps.build.outputs.platform }}
