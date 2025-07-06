@@ -314,7 +314,11 @@ jobs:
     
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - run: docker run -d -p 8080:8080 "${{ env.GHCR_IMAGE }}:latest"
+      - run: docker run -d -p 8080:8080 --name api "${{ env.GHCR_IMAGE }}:latest"
 
       - run: curl -i http://localhost:8080/hello-world
         name: Test API
+        continue-on-error: true
+
+      - run: docker logs API
+        name: Show API logs

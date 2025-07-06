@@ -2,4 +2,4 @@
 WORKDIR /app
 EXPOSE 8080
 COPY . .
-ENTRYPOINT ["HelloWorldApi"]
+ENTRYPOINT ["./HelloWorldApi"]
