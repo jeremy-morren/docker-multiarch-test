@@ -112,7 +112,7 @@ jobs:
           dockerfile: src/HelloWorldApi/Dockerfile.windows
 
       - name: Push Image
-        run: docker push "${{ env.GHCR_IMAGE }}@${{ steps.build.outputs.digest }}"
+        run: docker push ${{ env.GHCR_IMAGE }}
           
       - name: Export digest
         shell: pwsh
