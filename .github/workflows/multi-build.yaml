@@ -320,5 +320,5 @@ jobs:
         name: Test API
         continue-on-error: true
 
-      - run: docker logs API
+      - run: docker logs api
         name: Show API logs
