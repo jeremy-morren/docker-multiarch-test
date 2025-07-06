@@ -82,15 +82,19 @@ jobs:
         run: |
           $metadata = ConvertFrom-Json $env:DOCKER_METADATA_OUTPUT_JSON
           $args = @()
+          foreach ($t in $metadata.tags) {
+            $args += @( "--tag", $t)
+          }
           foreach ($l in $metadata.labels) {
             $args += @("--label", $l)
           }
           $platform = "${{ matrix.platform }}".Replace('/','-')
           $output = "${{ runner.temp }}/metadata"
           docker build $args `
+            --iidfile $output `
+            --output "type=image,name=${{ env:GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true" `
             --platform "${{ matrix.platform }}" `
             --file "${env:dockerfile}.${env:dockerfileExt}" `
-            --iidfile $output `
             $env:context
 
           if ($LASTEXITCODE -ne 0) {
@@ -109,11 +113,9 @@ jobs:
           context: ${{ runner.temp }}/publish
           dockerfile: src/HelloWorldApi/Dockerfile.windows
 
-      - name: Push Image
-        run: |
-          $tag = "${{ env.GHCR_IMAGE }}@${{ steps.build.outputs.digest }}"
-          docker image tag ${{ steps.build.outputs.imageId }} $tag
-          docker push $tag
+      # - name: Push Image
+      #   run: 
+      #     docker push "${{ env.GHCR_IMAGE }}@${{ steps.build.outputs.digest }}
           
       - name: Export digest
         shell: pwsh
