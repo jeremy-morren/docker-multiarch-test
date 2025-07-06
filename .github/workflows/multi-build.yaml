@@ -13,6 +13,7 @@ env:
   # The image name is derived from the GitHub repository name and the GitHub Container Registry (GHCR) URL.
   # The image name will be in the format: ghcr.io/<owner>/<repo>
   GHCR_IMAGE: ghcr.io/${{ github.repository }}
+  GHCR_TAG: ${{ github.run_id }}
 
 permissions:
   # Global permissions for the workflow, which can be overridden at the job level
@@ -80,9 +81,6 @@ jobs:
         run: |
           $metadata = ConvertFrom-Json $env:DOCKER_METADATA_OUTPUT_JSON
           $args = @()
-          foreach ($t in $metadata.tags) {
-            $args += @( "--tag", $t)
-          }
           foreach ($l in $metadata.labels) {
             $args += @("--label", $l)
           }
@@ -90,6 +88,7 @@ jobs:
           $output = "${{ runner.temp }}/metadata"
           docker build $args `
             --iidfile $output `
+            --tag ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }} `
             --platform "${{ matrix.platform }}" `
             --file "${env:dockerfile}.${env:dockerfileExt}" `
             $env:context
@@ -112,7 +111,7 @@ jobs:
           dockerfile: src/HelloWorldApi/Dockerfile.windows
 
       - name: Push Image
-        run: docker push ${{ env.GHCR_IMAGE }}
+        run: docker push ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }}
           
       - name: Export digest
         shell: pwsh
