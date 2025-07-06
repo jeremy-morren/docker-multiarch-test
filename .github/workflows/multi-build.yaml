@@ -317,7 +317,7 @@ jobs:
     steps:
       - run: docker run -d -p 8080:8080 --name api "${{ env.GHCR_IMAGE }}:latest"
 
-      - run: curl -i http://localhost:8080/hello-world
+      - run: curl -i http://localhost:8080/
         name: Test API
         continue-on-error: true
 
