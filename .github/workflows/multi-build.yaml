@@ -13,7 +13,6 @@ env:
   # The image name is derived from the GitHub repository name and the GitHub Container Registry (GHCR) URL.
   # The image name will be in the format: ghcr.io/<owner>/<repo>
   GHCR_IMAGE: ghcr.io/${{ github.repository }}
-  GHCR_TAG: ${{ github.run_id }}
 
 permissions:
   # Global permissions for the workflow, which can be overridden at the job level
@@ -26,40 +25,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # The build job builds the Docker image for each platform specified in the matrix.
   build-windows:
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - windows/amd64
-          - windows/arm64
-      # The matrix includes two platforms: linux/amd64 and linux/arm64.
-      # The build job will run for each platform in the matrix.
-
     permissions:
       packages: write
 
-    runs-on: >-
-      ${{ matrix.platform == 'windows/amd64' && 'windows-2022' ||
-          matrix.platform == 'windows/arm64' && 'windows-11-arm' }}
-    # The job runs on different runners based on the platform.
-    # For linux/amd64, it runs on the latest Ubuntu runner.
-    # For linux/arm64, it runs on an Ubuntu 24.04 ARM runner.
-    # The runner is selected based on the platform specified in the matrix.
+    runs-on: windows-latest
+    name: Build Docker image for Windows
 
-    name: Build Docker image for ${{ matrix.platform }}
+    env:
+      GHCR_TAG: ${{ github.run_id }}-windows
     
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # - uses: actions/setup-dotnet@v4
-      #   with:
-      #     dotnet-version: '8.0.x'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-      # - run: dotnet publish src/HelloWorldApi/HelloWorldApi.csproj -c Release -o ${{ runner.temp }}/publish
-      #   name: Publish app
+      - run: dotnet publish src/HelloWorldApi/HelloWorldApi.csproj -c Release -o ${{ runner.temp }}/publish
+        name: Publish app
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@3.4.0
@@ -84,12 +69,11 @@ jobs:
           foreach ($l in $metadata.labels) {
             $args += @("--label", $l)
           }
-          $platform = "${{ matrix.platform }}".Replace('/','-')
           $output = "${{ runner.temp }}/metadata"
           docker build $args `
             --iidfile $output `
             --tag ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }} `
-            --platform "${{ matrix.platform }}" `
+            --platform "windows/amd64" `
             --file "${env:dockerfile}.${env:dockerfileExt}" `
             $env:context
 
@@ -127,72 +111,80 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      # - name: Set up Docker Context for Buildx
-      #   # This step sets up a Docker context for Buildx.
-      #   # It creates a new context named "builders" that will be used for building the Docker image.
-      #   # The context allows Buildx to use the Docker daemon for building images.
-      #   id: buildx-context
-      #   run: |
-      #     docker context create builders
+  build-linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+  
+    runs-on: ->
+      ${{ matrix.platform == 'linux/amd64' && 'ubuntu-latest' ||
+          matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' }}
 
-      # - name: Set up Docker Buildx
-      #   # This step sets up Docker Buildx, which is a Docker CLI plugin for extended build capabilities with BuildKit.
-      #   # It uses the docker/setup-buildx-action to configure Buildx with the specified context and platforms.
-      #   # The platforms are specified in the matrix and will be used for building the Docker image.
-      #   uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
-      #   with:
-      #     endpoint: builders
-      #     platforms: ${{ matrix.platform }}
+    steps:
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-      # - name: Login to GitHub Container Registry
-      #   # This step logs in to the GitHub Container Registry (GHCR) using the docker/login-action.
-      #   # It uses the GitHub actor's username and the GITHUB_TOKEN secret for authentication.
-      #   uses: docker/login-action@3.4.0
-      #   with:
-      #     registry: ghcr.io
-      #     username: ${{ github.actor }}
-      #     password: ${{ secrets.GITHUB_TOKEN }}
+      - run: dotnet publish src/HelloWorldApi/HelloWorldApi.csproj -c Release -o ${{ runner.temp }}/publish
+        name: Publish app
 
-      # - name: Build and push by digest
-      #   # This step builds and pushes the Docker image using Buildx.
-      #   # It uses the docker/build-push-action to build the image with the specified context and platforms.
-      #   # The image is built with the labels and annotations generated in the previous steps.
-      #   # The outputs are configured to push the image by digest, which allows for better caching and versioning.
-      #   # The cache-from and cache-to options are used to enable caching for the build process.
-      #   # The cache is stored in GitHub Actions cache and is scoped to the repository, branch, and platform.
-      #   id: build
-      #   uses: docker/build-push-action@v6.18.0
-      #   with:
-      #     file: src/HelloWorldApi/Dockerfile.${{ env.dockerfileExt }}
-      #     context: ${{ runner.temp }}/publish
-      #     platforms: ${{ matrix.platform }}
-      #     labels: ${{ steps.meta.outputs.labels }}
-      #     annotations: ${{ steps.meta.outputs.annotations }}
-      #     outputs: type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true,oci-mediatypes=true
-      #     no-cache: true
+      - name: Set up Docker Context for Buildx
+        id: buildx-context
+        run: docker context create builders
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@3.10.0
+        with:
+          endpoint: builders
+          platforms: ${{ matrix.platform }}
 
-      # - name: Export digest
-      #   # This step exports the digest of the built image to a file.
-      #   # It creates a directory in /tmp/digests and saves the digest of the image to a file.
-      #   # The digest is obtained from the output of the build step.
-      #   # The digest is used to uniquely identify the built image and can be used for further processing or verification.
-      #   run: |
-      #     mkdir -p /tmp/digests
-      #     digest="${{ steps.build.outputs.digest }}"
-      #     touch "/tmp/digests/${digest#sha256:}"
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Upload digest
-      #   # This step uploads the digest file to the GitHub Actions artifact storage.
-      #   # It uses the actions/upload-artifact action to upload the file created in the previous step.
-      #   # The artifact is named digests-${{ env.PLATFORM_PAIR }}, where PLATFORM_PAIR is the platform name with '/' replaced by '-'.
-      #   # The artifact is retained for 1 day, and if no files are found, it will throw an error.      
-      #   uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-      #   with:
-      #     name: digests-${{ env.PLATFORM_PAIR }}
-      #     path: /tmp/digests/*
-      #     if-no-files-found: error
-      #     retention-days: 1
+      - name: Build and push by digest
+        # This step builds and pushes the Docker image using Buildx.
+        # It uses the docker/build-push-action to build the image with the specified context and platforms.
+        # The image is built with the labels and annotations generated in the previous steps.
+        # The outputs are configured to push the image by digest, which allows for better caching and versioning.
+        # The cache-from and cache-to options are used to enable caching for the build process.
+        # The cache is stored in GitHub Actions cache and is scoped to the repository, branch, and platform.
+        id: build
+        uses: docker/build-push-action@v6.18.0
+        with:
+          file: src/HelloWorldApi/Dockerfile.linux
+          context: ${{ runner.temp }}/publish
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          outputs: type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true,oci-mediatypes=true
+          no-cache: true
+
+      - name: Export digest
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - id: prepare
+        name: Prepare platform pair
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
+      - name: Upload digest
+        uses: actions/upload-artifact@4.6.2
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
 
 
   # merge:
