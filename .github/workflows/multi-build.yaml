@@ -91,16 +91,14 @@ jobs:
           foreach ($t in $metadata.tags) {
             $args += @("--tag", "${t}-${platform}")
           }
-          $iidfile = "${{ runner.temp }}/imageId"
+          $output = "${{ runner.temp }}/metadata"
           docker build $args `
             --platform "${{ matrix.platform }}" `
             --file "${env:dockerfile}.${env:dockerfileExt}" `
-            --iidfile $iidfile `
-            --output $env:outputs `
+            --metadata-file $file `
             $env:context
           
-          $imageId = Get-Content $iidfile
-          docker image inspect $imageId
+          Get-Content $output
           
 
         env:
@@ -111,7 +109,6 @@ jobs:
                 matrix.platform == 'linux/arm64' && 'linux' ||
                 matrix.platform == 'windows/amd64' && 'windows' ||
                 matrix.platform == 'windows/arm64' && 'windows' }}
-          outputs: type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true,oci-mediatypes=true
           
 
       # - name: Set up Docker Context for Buildx
