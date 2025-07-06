@@ -25,91 +25,91 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # build-windows:
-  #   permissions:
-  #     packages: write
+  build-windows:
+    permissions:
+      packages: write
 
-  #   runs-on: windows-latest
-  #   name: Build Docker image for Windows
+    runs-on: windows-latest
+    name: Build Docker image for Windows
 
-  #   env:
-  #     GHCR_TAG: ${{ github.run_id }}-windows
+    env:
+      GHCR_TAG: ${{ github.run_id }}-windows
     
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  #     - uses: actions/setup-dotnet@v4
-  #       with:
-  #         dotnet-version: '8.0.x'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-  #     - run: dotnet publish src/HelloWorldApi/HelloWorldApi.csproj -c Release -o ${{ runner.temp }}/publish
-  #       name: Publish app
+      - run: dotnet publish src/HelloWorldApi/HelloWorldApi.csproj -c Release -o ${{ runner.temp }}/publish
+        name: Publish app
 
-  #     - name: Login to GitHub Container Registry
-  #       uses: docker/login-action@3.4.0
-  #       with:
-  #         registry: ghcr.io
-  #         username: ${{ github.actor }}
-  #         password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-  #     - name: Docker meta default
-  #       id: meta
-  #       uses: docker/metadata-action@v5
-  #       with:
-  #         images: ${{ env.GHCR_IMAGE }}
+      - name: Docker meta default
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.GHCR_IMAGE }}
 
-  #     - name: Build image
-  #       id: build
-  #       shell: pwsh
-  #       # JSON object format: @ { tags: [], labels: [], annotations: []}
-  #       run: |
-  #         $metadata = ConvertFrom-Json $env:DOCKER_METADATA_OUTPUT_JSON
-  #         $args = @()
-  #         foreach ($l in $metadata.labels) {
-  #           $args += @("--label", $l)
-  #         }
-  #         $output = "${{ runner.temp }}/metadata"
-  #         docker build $args `
-  #           --iidfile $output `
-  #           --tag ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }} `
-  #           --platform "windows/amd64" `
-  #           --file "${env:dockerfile}.${env:dockerfileExt}" `
-  #           $env:context
+      - name: Build image
+        id: build
+        shell: pwsh
+        # JSON object format: @ { tags: [], labels: [], annotations: []}
+        run: |
+          $metadata = ConvertFrom-Json $env:DOCKER_METADATA_OUTPUT_JSON
+          $args = @()
+          foreach ($l in $metadata.labels) {
+            $args += @("--label", $l)
+          }
+          $output = "${{ runner.temp }}/metadata"
+          docker build $args `
+            --iidfile $output `
+            --tag ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }} `
+            --platform "windows/amd64" `
+            --file "${env:dockerfile}.${env:dockerfileExt}" `
+            $env:context
 
-  #         if ($LASTEXITCODE -ne 0) {
-  #           exit $LASTEXITCODE
-  #         }
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
           
-  #         $digest = Get-Content $output
-  #         docker image inspect $digest
+          $digest = Get-Content $output
+          docker image inspect $digest
 
-  #         $id = $digest.TrimStart("sha256:")
-  #         Add-Content -Value "digest=${digest}" -Path $env:GITHUB_OUTPUT
-  #         Add-Content -Value "imageId=${id}" -Path $env:GITHUB_OUTPUT
-  #         Add-Content -Value "platform=${platform}" -Path $env:GITHUB_OUTPUT
+          $id = $digest.TrimStart("sha256:")
+          Add-Content -Value "digest=${digest}" -Path $env:GITHUB_OUTPUT
+          Add-Content -Value "imageId=${id}" -Path $env:GITHUB_OUTPUT
+          Add-Content -Value "platform=${platform}" -Path $env:GITHUB_OUTPUT
 
-  #       env:
-  #         # context: ${{ runner.temp }}/publish
-  #         context: ${{ runner.temp }}
-  #         dockerfile: src/HelloWorldApi/Dockerfile.windows
+        env:
+          # context: ${{ runner.temp }}/publish
+          context: ${{ runner.temp }}
+          dockerfile: src/HelloWorldApi/Dockerfile.windows
 
-  #     - name: Push Image
-  #       run: docker push ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }}
+      - name: Push Image
+        run: docker push ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }}
           
-  #     - name: Export digest
-  #       shell: pwsh
-  #       run: |
-  #         mkdir ${{ runner.temp }}/digests
-  #         Set-Content -Value "" -Path ${{ runner.TEMP }}/digests/${{ env.GHCR_TAG }}
+      - name: Export digest
+        shell: pwsh
+        run: |
+          mkdir ${{ runner.temp }}/digests
+          Set-Content -Value "" -Path ${{ runner.TEMP }}/digests/${{ env.GHCR_TAG }}
 
-  #     - name: Upload digest 
-  #       uses: actions/upload-artifact@4.6.2
-  #       with:
-  #         name: digests-${{ steps.build.outputs.platform }}
-  #         path: ${{ runner.temp }}/digests/*
-  #         if-no-files-found: error
-  #         retention-days: 1
+      - name: Upload digest 
+        uses: actions/upload-artifact@4.6.2
+        with:
+          name: digests-${{ steps.build.outputs.platform }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
 
   build-linux:
     permissions:
@@ -203,7 +203,7 @@ jobs:
 
     needs:
       - build-linux
-      # - build-windows
+      - build-windows
       
     steps:
       - name: Download digests
