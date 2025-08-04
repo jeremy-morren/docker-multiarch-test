@@ -75,7 +75,7 @@ jobs:
         run: |
           $platform = '${{ matrix.platform }}'.Split('/')[1]
           Add-Content -Value "platform=${platform}" -Path $env:GITHUB_OUTPUT
-          $tag = "${{ github.run_id }}-win${platform}"
+          $tag = "${{ github.run_id }}-win-${platform}"
           Add-Content -Value "tag=${tag}" -Path $env:GITHUB_OUTPUT
 
       - name: Build image
@@ -115,8 +115,8 @@ jobs:
       - name: Get image digest
         id: get-digest
         run: |
-          docker image inspect ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }}
-          $digest = docker image inspect "${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }}" --format '{{ index .RepoDigests 0 }}'
+          docker image inspect ${{ env.GHCR_IMAGE }}:${{ steps.tag.outputs.tag }}
+          $digest = docker image inspect "${{ env.GHCR_IMAGE }}:${{ steps.tag.outputs.tag }}" --format '{{ index .RepoDigests 0 }}'
           $digest = $digest.Split('@')[1].Substring("sha256:".Length)
           echo "Digest: $digest"
           Add-Content -Value "digest=${digest}" -Path $env:GITHUB_OUTPUT
@@ -130,7 +130,7 @@ jobs:
       - name: Upload digest 
         uses: actions/upload-artifact@4.6.2
         with:
-          name: digests-win${{ steps.tag.outputs.platform }}
+          name: digests-win-${{ steps.tag.outputs.platform }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
