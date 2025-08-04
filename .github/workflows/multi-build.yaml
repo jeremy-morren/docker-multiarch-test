@@ -39,7 +39,7 @@ jobs:
       matrix:
         platform:
           - windows/amd64
-          - windows/arm64
+          # - windows/arm64 - Uncomment when Docker is installed on Windows ARM64 runners
   
     runs-on: >-
       ${{ matrix.platform == 'windows/amd64' && 'windows-latest' ||
@@ -70,10 +70,11 @@ jobs:
           images: ${{ env.GHCR_IMAGE }}
 
       - name: Create Tag
-        id: create-tag
+        id: tag
         shell: pwsh
         run: |
           $platform = '${{ matrix.platform }}'.Split('/')[1]
+          Add-Content -Value "platform=${platform}" -Path $env:GITHUB_OUTPUT
           $tag = "${{ github.run_id }}-win${platform}"
           Add-Content -Value "tag=${tag}" -Path $env:GITHUB_OUTPUT
 
@@ -90,7 +91,7 @@ jobs:
           $output = "${{ runner.temp }}/metadata"
           docker build $args `
             --iidfile $output `
-            --tag ${{ env.GHCR_IMAGE }}:${{ steps.create-tag.outputs.tag }} `
+            --tag ${{ env.GHCR_IMAGE }}:${{ steps.tag.outputs.tag }} `
             --platform "${{ matrix.platform }}" `
             --file "${{ env.DOCKERFILE }}.windows" `
             $env:context
@@ -109,7 +110,7 @@ jobs:
           context: ${{ runner.temp }}/publish
 
       - name: Push Image
-        run: docker push ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }}
+        run: docker push ${{ env.GHCR_IMAGE }}:${{ steps.tag.outputs.tag }}
         
       - name: Get image digest
         id: get-digest
@@ -129,7 +130,7 @@ jobs:
       - name: Upload digest 
         uses: actions/upload-artifact@4.6.2
         with:
-          name: digests-${{ steps.build.outputs.platform }}
+          name: digests-win${{ steps.tag.outputs.platform }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
