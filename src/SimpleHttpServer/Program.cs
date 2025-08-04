@@ -1,6 +1,7 @@
 ﻿
 
 using System.Net;
+using System.Text;
 using System.Web;
 using Serilog;
 using SimpleHttpServer;
@@ -46,26 +47,17 @@ finally
 
 class BasicHandler : IHttpRequestHandler
 {
-    private static readonly HttpClient Client = new();
-
-    public async Task<HttpResponse> Handle(HttpRequest request)
+    public Task<HttpResponse> Handle(HttpRequest request)
     {
-        if (!request.Headers.TryGetValue("Authorization", out var auth) || !auth.StartsWith("Bearer "))
-            return HttpResponse.Create(HttpStatusCode.Unauthorized);
-
-        var query = HttpUtility.ParseQueryString(request.Url.Query);
-        var qty = int.TryParse(query["qty"], out var q) ? q : 10;
-        var response = await Client.GetByteArrayAsync($"https://fakerapi.it/api/v2/companies?_quantity={qty}");
-        return new HttpResponse()
-        {
-            Body = request.Method == HttpMethod.Head ? [] : response,
-            StatusCode = HttpStatusCode.OK,
-            Headers = new Dictionary<string, string>()
-            {
-                { "Content-Type", "application/json; charset=utf-8" }
-            }
-        };
-        // var response = HttpResponse.Create(HttpStatusCode.OK, "Hello, World!");
-        // return Task.FromResult(response);
+        // Return the raw response (for demonstration purposes)
+        var sb = new StringBuilder();
+        sb.AppendLine($"{request.Protocol} {request.Method} {request.Path}");
+        foreach (var header in request.Headers)
+            sb.AppendLine($"{header.Key}: {header.Value}");
+        sb.AppendLine();
+        if (request.Body.Length > 0)
+            sb.AppendLine(Encoding.UTF8.GetString(request.Body));
+        var response = HttpResponse.Create(HttpStatusCode.OK, sb.ToString());
+        return Task.FromResult(response);
     }
 }

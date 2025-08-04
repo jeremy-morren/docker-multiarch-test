@@ -21,11 +21,11 @@ public static class HttpRequestReader
                 break;
             headerLines.Add(line);
         }
-        var headers = new Dictionary<string, HttpHeaderValue>(StringComparer.OrdinalIgnoreCase);
+        var headers = new HttpHeadersDictionary();
         foreach (var header in headerLines)
         {
             ParseHeader(header, out var key, out var value);
-            headers.TryAdd(key, value);
+            headers.Add(key, value);
         }
         byte[] body;
 
@@ -98,7 +98,7 @@ public static class HttpRequestReader
         value = line[(colonIndex + 1)..].Trim();
     }
 
-    private static Uri GetUrl(string path, Dictionary<string, HttpHeaderValue> headers)
+    private static Uri GetUrl(string path, HttpHeadersDictionary headers)
     {
         if (headers.TryGetValue("Host", out var host))
         {

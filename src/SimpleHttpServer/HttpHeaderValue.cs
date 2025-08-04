@@ -1,21 +1,57 @@
-﻿namespace SimpleHttpServer;
+﻿// ReSharper disable UnusedMember.Global
+namespace SimpleHttpServer;
 
 /// <summary>
-/// An HTTP header value that can be compared with other values.
-/// This class implements case-insensitive comparison for HTTP header values,
+/// Value of an HTTP header.
 /// </summary>
+/// <remarks>
+/// Allows multiple values and implements case-insensitive comparison.
+/// </remarks>
 public class HttpHeaderValue : IEquatable<HttpHeaderValue>, IEquatable<string>
 {
-    public string Value { get; }
+    private readonly string[] _values;
 
-    public HttpHeaderValue(string value)
+    private HttpHeaderValue(string[] values)
     {
-        Value = value;
+        _values = values;
     }
 
+    /// <summary>
+    /// Creates a new <see cref="HttpHeaderValue"/> with the specified value appended to the existing values.
+    /// </summary>
+    public HttpHeaderValue Add(string value)
+    {
+        var array = new string[_values.Length + 1];
+        _values.CopyTo(array, 0);
+        array[^1] = value;
+        return new HttpHeaderValue(array);
+    }
+
+    /// <summary>
+    /// ets the concatenated string representation of all values in the header, separated by commas.
+    /// </summary>
+    public string Value => string.Join(',', _values);
+
+    /// <summary>
+    /// Checks if the header value is equal to the specified string, ignoring case.
+    /// </summary>
+    /// <param name="other"></param>
+    /// <returns></returns>
+    public bool Equals(string? other) => string.Equals(Value, other, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Checks if the header value is equal to the specified string, ignoring case.
+    /// </summary>
+    /// <param name="other"></param>
+    /// <returns></returns>
     public bool StartsWith(string other) => Value.StartsWith(other, StringComparison.OrdinalIgnoreCase);
 
-    public bool Equals(string? other) => string.Equals(Value, other, StringComparison.OrdinalIgnoreCase);
+    /// <summary>
+    /// Checks if the header value contains the specified string, ignoring case.
+    /// </summary>
+    /// <param name="other"></param>
+    /// <returns></returns>
+    public bool Contains(string other) => Value.Contains(other, StringComparison.OrdinalIgnoreCase);
 
     public bool Equals(HttpHeaderValue? other)
     {
@@ -42,8 +78,9 @@ public class HttpHeaderValue : IEquatable<HttpHeaderValue>, IEquatable<string>
 
     public static bool operator !=(HttpHeaderValue? left, HttpHeaderValue? right) => !Equals(left, right);
 
-    public static implicit operator HttpHeaderValue(string value) => new(value);
+    public static implicit operator HttpHeaderValue(string value) => new([value]);
     public static implicit operator string(HttpHeaderValue value) => value.Value;
 
+    /// <inheritdoc cref="Value"/>
     public override string ToString() => Value;
 }

@@ -10,21 +10,21 @@ public class HttpResponse
 {
     public required HttpStatusCode StatusCode { get; init; }
 
-    public required IReadOnlyDictionary<string, string> Headers { get; init; }
+    public required HttpHeadersDictionary Headers { get; init; }
 
     public byte[] Body { get; init; } = [];
 
     public static HttpResponse Create(HttpStatusCode statusCode) => new ()
     {
         StatusCode = statusCode,
-        Headers = new Dictionary<string, string>()
+        Headers = new HttpHeadersDictionary()
     };
 
     public static HttpResponse Create(HttpStatusCode statusCode, string body) =>
         new()
         {
             StatusCode = statusCode,
-            Headers = new Dictionary<string, string>
+            Headers = new HttpHeadersDictionary()
             {
                 { "Content-Type", "text/plain; charset=utf-8" }
             },
