@@ -32,12 +32,19 @@ jobs:
     permissions:
       packages: write
 
-    runs-on: windows-latest
     name: Build Docker image for Windows
-
-    env:
-      GHCR_TAG: ${{ github.run_id }}-windows
     
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - windows/amd64
+          - windows/arm64
+  
+    runs-on: >-
+      ${{ matrix.platform == 'windows/amd64' && 'windows-latest' ||
+          matrix.platform == 'windows/arm64' && 'windows-11-arm' }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,6 +69,14 @@ jobs:
         with:
           images: ${{ env.GHCR_IMAGE }}
 
+      - name: Create Tag
+        id: create-tag
+        shell: pwsh
+        run: |
+          $platform = '${{ matrix.platform }}'.Split('/')[1]
+          $tag = "${{ github.run_id }}-win${platform}"
+          Add-Content -Value "tag=${tag}" -Path $env:GITHUB_OUTPUT
+
       - name: Build image
         id: build
         shell: pwsh
@@ -75,8 +90,8 @@ jobs:
           $output = "${{ runner.temp }}/metadata"
           docker build $args `
             --iidfile $output `
-            --tag ${{ env.GHCR_IMAGE }}:${{ env.GHCR_TAG }} `
-            --platform "windows/amd64" `
+            --tag ${{ env.GHCR_IMAGE }}:${{ steps.create-tag.outputs.tag }} `
+            --platform "${{ matrix.platform }}" `
             --file "${{ env.DOCKERFILE }}.windows" `
             $env:context
 

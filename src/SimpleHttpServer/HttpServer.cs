@@ -125,8 +125,8 @@ public sealed class HttpServer : IDisposable
                         GetHandle(client), GetRemoteEndpoint(client));
                     break;
                 }
-                _logger.Debug("Handling request {Method} {Url} from {Handle} {RemoteAddress}",
-                    request.Method, request.Url, GetHandle(client), GetRemoteEndpoint(client));
+                _logger.Debug("Handling request {Method} {Path} from {Handle} {RemoteAddress}",
+                    request.Method, request.Path, GetHandle(client), GetRemoteEndpoint(client));
 
                 var ts = Stopwatch.GetTimestamp();
 
@@ -146,10 +146,10 @@ public sealed class HttpServer : IDisposable
 
                 var elapsed = Stopwatch.GetElapsedTime(ts);
                 _logger.Information(
-                    "{RemoteAddress} {Method} {Url} {StatusCode} {BytesSent} {Elapsed:#,0.00} ms {UserAgent}",
+                    "{RemoteAddress} {Method} {Path} {StatusCode} {BytesSent} {Elapsed:#,0.00} ms {UserAgent}",
                     GetRemoteEndpoint(client),
                     request.Method,
-                    request.Url,
+                    request.Path,
                     (int)response.StatusCode,
                     response.Body.Length,
                     elapsed.TotalMilliseconds,
