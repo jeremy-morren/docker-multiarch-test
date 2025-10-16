@@ -1,12 +1,13 @@
 # This workflow builds a multi-arch Docker image using GitHub Actions and separated Github Runners with native support for ARM64 and AMD64 architectures, without using QEMU emulation.
 # It uses Docker Buildx to build and push the image to GitHub Container Registry (GHCR).
-name: Build multi arch Docker Image with separate Github Runners
+name: Build and push az-cli-managed-identity
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+      - actions
 
 env:
   # The name of the Docker image to be built and pushed to GHCR
@@ -179,12 +180,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push by digest
-        # This step builds and pushes the Docker image using Buildx.
-        # It uses the docker/build-push-action to build the image with the specified context and platforms.
-        # The image is built with the labels and annotations generated in the previous steps.
-        # The outputs are configured to push the image by digest, which allows for better caching and versioning.
-        # The cache-from and cache-to options are used to enable caching for the build process.
-        # The cache is stored in GitHub Actions cache and is scoped to the repository, branch, and platform.
         id: build
         uses: docker/build-push-action@v6.18.0
         with:
