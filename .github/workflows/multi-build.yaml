@@ -130,6 +130,37 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+          
+      # Problem: We need to delete the temporary tag from GHCR to avoid cluttering the package versions.
+      # Solution: Push a new image with the same tag, which will create a new package version, then delete that version.
+      # That will leave the previous package but without the temporary tag.
+      # This is the same result as docker buildx on linux i.e. a digest-only image without tags for the intermediate builds.
+      - name: Delete temporary tags from GHCR
+        shell: pwsh
+        run: |
+          $tag = '${{ steps.tag.outputs.tag }}'
+          $repo = '${{ env.GHCR_IMAGE }}'
+
+          docker tag mcr.microsoft.com/windows/nanoserver:ltsc2022 "${repo}:${tag}"
+          docker push "${repo}:${tag}"
+
+          $versions = gh api '/user/packages/container/{repo}/versions' | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          $versions = $versions | Where-Object { 
+            $x = $_.metadata.container.tags | Where-Object { $_ -eq $tag }
+            $x.Count -gt 0
+          }
+          $versions | Format-List
+          $versions | ForEach-Object {
+            $id = $_.id
+            Write-Host "Deleting container package version with ID: ${id}"
+            gh api --method DELETE "/user/packages/container/{repo}/versions/${id}"
+          }
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   build-linux:
     permissions:
       packages: write
@@ -305,29 +336,6 @@ jobs:
         id: inspect
         run: |
           docker buildx imagetools inspect '${{ env.GHCR_IMAGE }}:${{ steps.meta.outputs.version }}'
-
-      # Delete temporary tags from GHCR, we only want the image by digest i.e. an untagged image
-      # i.e. windows docker image
-      - name: Delete temporary tags from GHCR
-        shell: pwsh
-        run: |
-          $package = '${{ github.repository }}'.Split("/")[1]
-          $versions = gh api "/user/packages/container/${package}/versions" | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
-          }
-          $versions | Format-List
-          $versions = $versions | Where-Object { 
-            $tempTags = $_.metadata.container.tags | Where-Object { $_ -like "*temp*" -and $_ -like "*${{ github.run_id }}*" }
-            $tempTags.Count -gt 0
-          }
-          $versions | ForEach-Object {
-            $id = $_.id
-            Write-Host "Deleting container package version with ID: ${id}"
-            gh api --method DELETE "/user/packages/container/${package}/versions/${id}"
-          }
-        env:
-          GH_TOKEN: ${{ github.token }}
   
   test:
     needs: [merge]
