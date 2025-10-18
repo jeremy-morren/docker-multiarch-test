@@ -127,36 +127,6 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      # Problem: We need to delete the temporary tag from GHCR to avoid cluttering the package versions.
-      # However, we need to leave the package i.e. result should be a package without any tags, same as docker buildx on linux.
-      # Solution: Push a new image with the same tag, which will create a new package version, then delete that new version.
-      # Use the mcr.microsoft.com/windows/nanoserver:ltsc2022 which will already exist on the GHCR i.e. we just pushed it.
-      - name: Delete temporary tag from GHCR
-        shell: pwsh
-        run: |
-          $tag = '${{ steps.tag.outputs.tag }}'
-          $repo = '${{ env.GHCR_IMAGE }}'
-
-          docker tag mcr.microsoft.com/windows/nanoserver:ltsc2022 "${repo}:${tag}"
-          docker push "${repo}:${tag}"
-
-          $versions = gh api '/user/packages/container/{repo}/versions' | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
-          }
-          $versions = $versions | Where-Object { 
-            $x = $_.metadata.container.tags | Where-Object { $_ -eq $tag }
-            $x.Count -gt 0
-          }
-          $versions | Format-List
-          $versions | ForEach-Object {
-            $id = $_.id
-            Write-Host "Deleting container package version with ID: ${id}"
-            gh api --method DELETE "/user/packages/container/{repo}/versions/${id}"
-          }
-        env:
-          GH_TOKEN: ${{ github.token }}
-
   build-linux:
     permissions:
       packages: write
@@ -332,6 +302,67 @@ jobs:
         id: inspect
         run: |
           docker buildx imagetools inspect '${{ env.GHCR_IMAGE }}:${{ steps.meta.outputs.version }}'
+
+      # Checkout so github cli can be used easily
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Problem: We need to delete the temporary tags from GHCR to avoid cluttering the package versions.
+      # However, we need to leave the package i.e. result should be a package without any tags, same as docker buildx on linux.
+      # Solution: Push a new image with the same tag, which will create a new package version, then delete that new version.
+      # Use the mcr.microsoft.com/windows/nanoserver:ltsc2022 which will already exist on the GHCR i.e. we just pushed it.
+      - name: Delete temporary tag from GHCR
+        shell: pwsh
+        run: |
+          function HasTempTag {
+            param (
+              $Package
+            )
+            $tags = $Package.metadata.container.tags
+            foreach ($tag in $tags) {
+              if ($tag -like '*temp*' -and $tag -like '*${{ github.run_id }}*') {
+                return $true
+              }
+            }
+            return $false
+          }
+
+          docker pull alpine:latest
+
+          $versions = gh api '/user/packages/container/{repo}/versions' | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          $versions = $versions | ? { HasTempTag -Package $_ }
+          $versions | Format-List
+
+          $versions | % {
+            $_.metadata.container.tags | ForEach-Object {
+              $tag = $_
+              Write-Host "Overwriting ${tag}"
+              docker tag alpine:latest "${{ env.GHCR_IMAGE }}:${tag}"
+              docker push "${{ env.GHCR_IMAGE }}:${tag}"
+            }
+          }
+
+          # Now delete the newly created package versions i.e. alpine with the temp tags
+          
+          $versions = gh api '/user/packages/container/{repo}/versions' | ConvertFrom-Json
+          $versions = $versions | Where-Object { 
+            $x = $_.metadata.container.tags | Where-Object { $_ -like '*temp*' -and $_ -like '*${{ github.run_id }}*' }
+            $x.Count -gt 0
+          }
+          $versions | Format-List
+          $versions | ForEach-Object {
+            $id = $_.id
+            Write-Host "Deleting container package version with ID: ${id}"
+
+
+            gh api --method DELETE "/user/packages/container/{repo}/versions/${id}"
+          }
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   
   test:
     needs: [merge]
