@@ -112,9 +112,6 @@ jobs:
           $digest = $digest.Split('@')[1].Substring("sha256:".Length)
           echo "Digest: $digest"
           Add-Content -Value "digest=${digest}" -Path $env:GITHUB_OUTPUT
-
-          docker tag "${{ env.GHCR_IMAGE }}:${{ steps.tag.outputs.tag }}" "${{ env.GHCR_IMAGE }}@sha256:${digest}"
-          docker push "${{ env.GHCR_IMAGE }}@sha256:${digest}"
           
       - name: Export digest
         shell: pwsh
@@ -130,12 +127,10 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-          
       # Problem: We need to delete the temporary tag from GHCR to avoid cluttering the package versions.
-      # Solution: Push a new image with the same tag, which will create a new package version, then delete that version.
-      # That will leave the previous package but without the temporary tag.
-      # This is the same result as docker buildx on linux i.e. a digest-only image without tags for the intermediate builds.
-      - name: Delete temporary tags from GHCR
+      # However, we need to leave the package i.e. result should be a package without any tags, same as docker buildx on linux.
+      # Solution: Push a new image with the same tag, which will create a new package version, then delete that new version.
+      - name: Delete temporary tag from GHCR
         shell: pwsh
         run: |
           $tag = '${{ steps.tag.outputs.tag }}'
