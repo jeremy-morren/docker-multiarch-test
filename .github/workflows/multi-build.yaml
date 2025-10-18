@@ -130,6 +130,7 @@ jobs:
       # Problem: We need to delete the temporary tag from GHCR to avoid cluttering the package versions.
       # However, we need to leave the package i.e. result should be a package without any tags, same as docker buildx on linux.
       # Solution: Push a new image with the same tag, which will create a new package version, then delete that new version.
+      # Use the mcr.microsoft.com/windows/nanoserver:ltsc2022 which will already exist on the GHCR i.e. we just pushed it.
       - name: Delete temporary tag from GHCR
         shell: pwsh
         run: |
