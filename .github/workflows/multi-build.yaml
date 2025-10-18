@@ -309,6 +309,12 @@ jobs:
       - name: Delete temporary tag from GHCR
         shell: pwsh
         run: |
+          function OnError {
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Error occurred. Exiting with code $LASTEXITCODE"
+              exit $LASTEXITCODE
+            }
+          }
           function HasTempTag {
             param (
               $Package
@@ -325,10 +331,7 @@ jobs:
           docker pull alpine:latest
 
           Write-Host "Fetching temporary tagged package versions"
-          $versions = gh api '/user/packages/container/${{ github.event.repository.name }}/versions' | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
-          }
+          $versions = gh api '/user/packages/container/${{ github.event.repository.name }}/versions' | ConvertFrom-Json ; OnError
           $versions = $versions | ? { HasTempTag -Package $_ }
           $versions | Format-List
 
@@ -337,14 +340,14 @@ jobs:
               $tag = $_
               Write-Host "Overwriting ${tag}"
               docker tag alpine:latest "${{ env.GHCR_IMAGE }}:${tag}"
-              docker push "${{ env.GHCR_IMAGE }}:${tag}"
+              docker push "${{ env.GHCR_IMAGE }}:${tag}" ; OnError
             }
           }
 
           # Now delete the newly created package versions i.e. alpine with the temp tags
           Write-Host "Deleting temporary tagged package versions"
           
-          $versions = gh api '/user/packages/container/${{ github.event.repository.name }}/versions' | ConvertFrom-Json
+          $versions = gh api '/user/packages/container/${{ github.event.repository.name }}/versions' | ConvertFrom-Json ; OnError
           $versions = $versions | Where-Object { 
             $x = $_.metadata.container.tags | Where-Object { $_ -like '*temp*' -and $_ -like '*${{ github.run_id }}*' }
             $x.Count -gt 0
@@ -354,7 +357,7 @@ jobs:
             $id = $_.id
             Write-Host "Deleting container package version with ID: ${id}"
 
-            gh api --method DELETE "/user/packages/container/${{ github.event.repository.name }}/versions/${id}"
+            gh api --method DELETE "/user/packages/container/${{ github.event.repository.name }}/versions/${id}" ; OnError
           }
         env:
           GH_TOKEN: ${{ github.token }}
