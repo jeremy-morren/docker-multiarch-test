@@ -112,6 +112,9 @@ jobs:
           $digest = $digest.Split('@')[1].Substring("sha256:".Length)
           echo "Digest: $digest"
           Add-Content -Value "digest=${digest}" -Path $env:GITHUB_OUTPUT
+
+          docker tag "${{ env.GHCR_IMAGE }}:${{ steps.tag.outputs.tag }}" "${{ env.GHCR_IMAGE }}@sha256:${digest}"
+          docker push "${{ env.GHCR_IMAGE }}@sha256:${digest}"
           
       - name: Export digest
         shell: pwsh
