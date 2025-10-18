@@ -306,8 +306,17 @@ jobs:
       # Problem: We need to delete the temporary tags from GHCR to avoid cluttering the package versions.
       # However, we need to leave the package i.e. result should be a package without any tags, same as docker buildx on linux.
       # Solution: Push a new image with the same tag, which will create a new package version, then delete that new version.
+      - name: Create scratch image
+        id: scratch
+        run: |
+          echo "FROM scratch" > Dockerfile.scratch
+          docker build -f Dockerfile.scratch -t tmp-scratch:latest .
+          echo "image=tmp-scratch:latest" >> $GITHUB_OUTPUT
+      
       - name: Delete temporary tag from GHCR
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           function OnError {
             if ($LASTEXITCODE -ne 0) {
@@ -328,7 +337,7 @@ jobs:
             return $false
           }
 
-          docker pull alpine:latest
+          # First fetch all temporary tagged package versions and overwrite them with the scratch image
 
           Write-Host "Fetching temporary tagged package versions"
           $versions = gh api '/user/packages/container/${{ github.event.repository.name }}/versions' | ConvertFrom-Json ; OnError
@@ -339,12 +348,12 @@ jobs:
             $_.metadata.container.tags | ForEach-Object {
               $tag = $_
               Write-Host "Overwriting ${tag}"
-              docker tag alpine:latest "${{ env.GHCR_IMAGE }}:${tag}"
+              docker tag ${{ steps.scratch.outputs.image }} "${{ env.GHCR_IMAGE }}:${tag}"
               docker push "${{ env.GHCR_IMAGE }}:${tag}" ; OnError
             }
           }
 
-          # Now delete the newly created package versions i.e. alpine with the temp tags
+          # Now delete the newly created package versions i.e. those we just pushed
           Write-Host "Deleting temporary tagged package versions"
           
           $versions = gh api '/user/packages/container/${{ github.event.repository.name }}/versions' | ConvertFrom-Json ; OnError
@@ -359,8 +368,6 @@ jobs:
 
             gh api --method DELETE "/user/packages/container/${{ github.event.repository.name }}/versions/${id}" ; OnError
           }
-        env:
-          GH_TOKEN: ${{ github.token }}
 
   
   test:
