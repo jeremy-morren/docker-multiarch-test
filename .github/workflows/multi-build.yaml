@@ -117,6 +117,8 @@ jobs:
           $versions = gh api '/user/packages/container/{repo}/versions' | ConvertFrom-Json
           $versions = $versions | Where-Object { $_.metadata.container.tags -contains '${{ steps.tag.outputs.tempTag }}' }
           $versions | Format-List
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       # - name: Push Image
       #   run: docker push ${{ env.GHCR_IMAGE }}:${{ steps.tag.outputs.tag }}
