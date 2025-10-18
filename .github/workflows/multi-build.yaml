@@ -116,7 +116,15 @@ jobs:
           # 3. Using the GitHub cli, delete the temporary tag from GHCR
           $versions = gh api '/user/packages/container/{repo}/versions' | ConvertFrom-Json
           $versions = $versions | Where-Object { $_.metadata.container.tags -contains '${{ steps.tag.outputs.tempTag }}' }
-          $versions | Format-List
+          $versions | ForEach-Object {
+            Write-Host "Deleting container package version with ID: $($_.id)"
+            gh api --method DELETE "/user/packages/container/{repo}/versions/$($_.id)"
+            Write-Host "Deleted package version with ID: $($_.id)"
+          }
+
+          docker rmi $tag
+
+          docker pull $digest
         env:
           GH_TOKEN: ${{ github.token }}
 
