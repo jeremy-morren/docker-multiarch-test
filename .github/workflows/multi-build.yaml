@@ -112,21 +112,6 @@ jobs:
           $digest = $digest.Split('@')[1].Substring("sha256:".Length)
           echo "Digest: $digest"
           Add-Content -Value "digest=${digest}" -Path $env:GITHUB_OUTPUT
-  
-      # Delete the temporary tag from GHCR, we only want the image by digest i.e. an untagged image
-      # Equivalent of docker buildx on linux
-      - name: Delete temporary tag from GHCR
-        shell: pwsh
-        run: |
-          $versions = gh api '/user/packages/container/{repo}/versions' | ConvertFrom-Json
-          $versions = $versions | Where-Object { $_.metadata.container.tags -contains '${{ steps.tag.outputs.tag }}' }
-          $versions | ForEach-Object {
-            Write-Host "Deleting container package version with ID: $($_.id)"
-            gh api --method DELETE "/user/packages/container/{repo}/versions/$($_.id)"
-            Write-Host "Deleted package version with ID: $($_.id)"
-          }
-        env:
-          GH_TOKEN: ${{ github.token }}
           
       - name: Export digest
         shell: pwsh
@@ -307,8 +292,8 @@ jobs:
         if: steps.manifest-annotate.outcome == 'failure'
         working-directory: /tmp/digests
         run: |
-              docker buildx imagetools create  $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-                $(printf '${{ env.GHCR_IMAGE }}@sha256:%s ' *)
+          docker buildx imagetools create  $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.GHCR_IMAGE }}@sha256:%s ' *)
 
       - name: Inspect image
         # This step inspects the created manifest list to verify its contents.
@@ -317,6 +302,28 @@ jobs:
         id: inspect
         run: |
           docker buildx imagetools inspect '${{ env.GHCR_IMAGE }}:${{ steps.meta.outputs.version }}'
+
+      # Delete temporary tags from GHCR, we only want the image by digest i.e. an untagged image
+      # i.e. windows docker image
+      - name: Delete temporary tags from GHCR
+        shell: pwsh
+        run: |
+          $versions = gh api '/user/packages/container/{repo}/versions' | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          $versions | Format-List
+          $versions = $versions | Where-Object { 
+            $tempTags = $_.metadata.container.tags | Where-Object { $_ -like "*temp*" -and $_ -like "*${{ github.run_id }}*" }
+            $tempTags.Count -gt 0
+          }
+          $versions | ForEach-Object {
+            Write-Host "Deleting container package version with ID: $($_.id)"
+            gh api --method DELETE "/user/packages/container/{repo}/versions/$($_.id)"
+            Write-Host "Deleted package version with ID: $($_.id)"
+          }
+        env:
+          GH_TOKEN: ${{ github.token }}
   
   test:
     needs: [merge]
