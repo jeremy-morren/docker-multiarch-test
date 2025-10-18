@@ -303,10 +303,6 @@ jobs:
         run: |
           docker buildx imagetools inspect '${{ env.GHCR_IMAGE }}:${{ steps.meta.outputs.version }}'
 
-      # Checkout so github cli can be used easily
-      - name: Checkout
-        uses: actions/checkout@v4
-
       # Problem: We need to delete the temporary tags from GHCR to avoid cluttering the package versions.
       # However, we need to leave the package i.e. result should be a package without any tags, same as docker buildx on linux.
       # Solution: Push a new image with the same tag, which will create a new package version, then delete that new version.
@@ -326,10 +322,10 @@ jobs:
             return $false
           }
 
-          docker pull scratch:latest
+          docker pull alpine:latest
 
           Write-Host "Fetching temporary tagged package versions"
-          $versions = gh api '/user/packages/container/{repo}/versions' | ConvertFrom-Json
+          $versions = gh api '/user/packages/container/${{ github.event.repository.name }}/versions' | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
@@ -340,15 +336,15 @@ jobs:
             $_.metadata.container.tags | ForEach-Object {
               $tag = $_
               Write-Host "Overwriting ${tag}"
-              docker tag scratch:latest "${{ env.GHCR_IMAGE }}:${tag}"
+              docker tag alpine:latest "${{ env.GHCR_IMAGE }}:${tag}"
               docker push "${{ env.GHCR_IMAGE }}:${tag}"
             }
           }
 
-          # Now delete the newly created package versions i.e. scratch with the temp tags
+          # Now delete the newly created package versions i.e. alpine with the temp tags
           Write-Host "Deleting temporary tagged package versions"
           
-          $versions = gh api '/user/packages/container/{repo}/versions' | ConvertFrom-Json
+          $versions = gh api '/user/packages/container/${{ github.event.repository.name }}/versions' | ConvertFrom-Json
           $versions = $versions | Where-Object { 
             $x = $_.metadata.container.tags | Where-Object { $_ -like '*temp*' -and $_ -like '*${{ github.run_id }}*' }
             $x.Count -gt 0
@@ -358,7 +354,7 @@ jobs:
             $id = $_.id
             Write-Host "Deleting container package version with ID: ${id}"
 
-            gh api --method DELETE "/user/packages/container/{repo}/versions/${id}"
+            gh api --method DELETE "/user/packages/container/${{ github.event.repository.name }}/versions/${id}"
           }
         env:
           GH_TOKEN: ${{ github.token }}
