@@ -308,7 +308,8 @@ jobs:
       - name: Delete temporary tags from GHCR
         shell: pwsh
         run: |
-          $versions = gh api '/user/packages/container/${{ github.repository }}/versions' | ConvertFrom-Json
+          $package = '${{ github.repository }}'.Split("/")[1]
+          $versions = gh api "/user/packages/container/${package}/versions" | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
@@ -318,9 +319,9 @@ jobs:
             $tempTags.Count -gt 0
           }
           $versions | ForEach-Object {
-            Write-Host "Deleting container package version with ID: $($_.id)"
-            gh api --method DELETE "/user/packages/container/{repo}/versions/$($_.id)"
-            Write-Host "Deleted package version with ID: $($_.id)"
+            $id = $_.id
+            Write-Host "Deleting container package version with ID: ${id}"
+            gh api --method DELETE "/user/packages/container/${package}/versions/${id}"
           }
         env:
           GH_TOKEN: ${{ github.token }}
