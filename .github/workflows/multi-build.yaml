@@ -308,7 +308,7 @@ jobs:
       - name: Delete temporary tags from GHCR
         shell: pwsh
         run: |
-          $versions = gh api '/user/packages/container/{repo}/versions' | ConvertFrom-Json
+          $versions = gh api '/user/packages/container/${{ github.repository }}/versions' | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
