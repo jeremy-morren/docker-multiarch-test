@@ -81,17 +81,19 @@ jobs:
       # Build the docker image with a temporary tag
       - name: Build image
         id: build
-        shell: pwsh
-        # DOCKER_METADATA_OUTPUT_JSON format: @ { tags: [], labels: [], annotations: []}
+        # Use powershell.exe to take advantage of the fact that ConvertFrom-Json does not convert date strings to DateTime objects like pwsh does.
+        # See https://stackoverflow.com/a/74319203/6614154
+        shell: powershell.exe
+        # DOCKER_METADATA_OUTPUT_JSON format: @ { tags: [], labels: {}, annotations: []}
         run: |
           $metadata = ConvertFrom-Json $env:DOCKER_METADATA_OUTPUT_JSON
-          $args = @()
-          foreach ($l in $metadata.labels) {
-            $args += @("--label", $l)
+          $labels = @()
+          foreach ($l in $metadata.labels.PSObject.Properties) {
+            $labels += "$($l.Name)=$($l.Value)"
           }
 
           $output = "${{ runner.temp }}/metadata"
-          docker build $args `
+          docker build $labels `
             --iidfile $output `
             --tag "${{ env.GHCR_IMAGE }}:${{ steps.tag.outputs.tag }}" `
             --platform "windows/${{ matrix.platform }}" `
