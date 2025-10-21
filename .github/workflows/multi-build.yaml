@@ -89,7 +89,9 @@ jobs:
           $metadata = ConvertFrom-Json $env:DOCKER_METADATA_OUTPUT_JSON
           $labels = @()
           foreach ($l in $metadata.labels.PSObject.Properties) {
-            $labels += "$($l.Name)=$($l.Value)"
+            $name = $l.Name
+            $value = $l.Value
+            $labels += ("--label", "${name}=${value}"")
           }
 
           $output = "${{ runner.temp }}/metadata"
