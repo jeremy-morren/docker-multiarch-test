@@ -83,7 +83,7 @@ jobs:
         id: build
         # Use powershell.exe to take advantage of the fact that ConvertFrom-Json does not convert date strings to DateTime objects like pwsh does.
         # See https://stackoverflow.com/a/74319203/6614154
-        shell: powershell.exe
+        shell: powershell
         # DOCKER_METADATA_OUTPUT_JSON format: @ { tags: [], labels: {}, annotations: []}
         run: |
           $metadata = ConvertFrom-Json $env:DOCKER_METADATA_OUTPUT_JSON
