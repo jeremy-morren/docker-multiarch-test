@@ -91,7 +91,7 @@ jobs:
           foreach ($l in $metadata.labels.PSObject.Properties) {
             $name = $l.Name
             $value = $l.Value
-            $labels += ("--label", "${name}=${value}"")
+            $labels += ("--label", "${name}=${value}")
           }
 
           $output = "${{ runner.temp }}/metadata"
